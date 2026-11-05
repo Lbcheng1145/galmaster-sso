@@ -46,6 +46,39 @@ service portal, and the admin page.
 
 ## Quick start
 
+One-shot installer (idempotent — safe to re-run; existing config, data and
+dependencies are never overwritten):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Lbcheng1145/galmaster-sso/main/scripts/setup.sh | bash
+```
+
+Or drive it yourself:
+
+```bash
+SSO_DIR=$HOME/sso \
+SSO_AUTH_HOST=auth.example.com \
+SSO_OWNER_EMAIL=me@example.com \
+SSO_SYSTEMD=no SSO_START=no \
+  bash scripts/setup.sh
+```
+
+| Variable | Default | Notes |
+|---|---|---|
+| `SSO_DIR` | `/opt/sso` | install path |
+| `SSO_AUTH_HOST` | `auth.example.com` | login portal hostname |
+| `SSO_RP_ID` | derived from host | WebAuthn relying party |
+| `SSO_OWNER_EMAIL` | `owner@example.com` | the one account allowed in |
+| `SSO_PORT` | `3081` | loopback port |
+| `SSO_SYSTEMD` | `yes` | install + start a systemd unit (needs root) |
+| `SSO_START` | `yes` | start in the background when systemd is off |
+
+The script checks Node ≥ 18, clones the repo if `src/gateway.mjs` is absent,
+writes `src/config.mjs` (mode 600) only if missing, installs dependencies,
+creates `data/`, and verifies `/healthz` answers.
+
+Manual path, if you prefer:
+
 ```bash
 git clone https://github.com/Lbcheng1145/galmaster-sso.git && cd galmaster-sso
 cp src/config.example.mjs src/config.mjs && chmod 600 src/config.mjs
