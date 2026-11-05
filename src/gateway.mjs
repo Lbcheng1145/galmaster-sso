@@ -120,7 +120,27 @@ function savePanels(d) {
   panelsCache = d
   panelsAt = Date.now()
 }
-const PANEL_TARGETS = cfg.panelTargets
+const PANELDEF_FILE = DATA + '/paneldefs.json'
+const DEFAULT_PANEL_DEFS = cfg.panelTargets || []
+let panelDefsCache = null, panelDefsAt = 0
+function loadPanelDefs() {
+  if (panelDefsCache && Date.now() - panelDefsAt < 10000) return panelDefsCache
+  const d = readJson(PANELDEF_FILE, null)
+  if (Array.isArray(d)) {
+    panelDefsCache = d
+  } else {
+    panelDefsCache = DEFAULT_PANEL_DEFS
+    writeJson(PANELDEF_FILE, DEFAULT_PANEL_DEFS)
+    console.log('[gw] seeded paneldefs.json')
+  }
+  panelDefsAt = Date.now()
+  return panelDefsCache
+}
+function savePanelDefs(d) {
+  writeJson(PANELDEF_FILE, d)
+  panelDefsCache = d
+  panelDefsAt = Date.now()
+}
 const loadCreds = () => readJson(CRED_FILE, { credentials: [] })
 const saveCreds = (d) => writeJson(CRED_FILE, d)
 const loadTotp = () => readJson(TOTP_FILE, null)
@@ -514,6 +534,13 @@ const CSS = [
   '.prow{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}',
   '.prow .meta{flex:1;font-size:13.5px;font-weight:500}',
   '.prow input{width:150px;padding:8px 11px;font-size:13px;border-radius:9px}',
+  '.prow input.lbl{width:170px;font-weight:500;background:transparent;border-color:transparent}',
+  '.prow input.lbl:hover{background:var(--surface2);border-color:var(--line)}',
+  '.prow input.lbl:focus{background:var(--surface);border-color:var(--green)}',
+  '.prow.addrow{margin-top:4px;border-top:1px dashed var(--line);border-bottom:0;padding-top:14px}',
+  '.prow .chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--dim);white-space:nowrap}',
+  '.prow .chk input{width:auto;margin:0;padding:0}',
+  '#ndHost{width:205px}#ndPath{width:175px}',
   '.row .note{font-size:12px;color:var(--mute);font-family:inherit}',
   'button{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;border-radius:12px;padding:13px 18px;',
   'font-size:14.5px;font-weight:600;font-family:inherit;cursor:pointer;border:1px solid transparent;',
@@ -910,14 +937,27 @@ function adminPage(creds, totp, panels, emailCfg) {
     : '<div class="row"><div><div class="meta">未启用<span class="pill off">关闭</span></div>'
       + '<div class="note" style="margin-top:4px">绑定后可在任何设备用手机验证码登录</div></div>'
       + '<button class="ghost btn-sm" id="st">绑定</button></div>'
-  const panelRows = PANEL_TARGETS.map((t) => {
+  const panelRows = loadPanelDefs().map((t) => {
     const cur = panels[t.host] || {}
-    return '<div class="prow"><div class="meta">' + t.label
-      + (cur.password ? '<span class="pill">已配置</span>' : '<span class="pill off">未配置</span>') + '</div>'
+    const lbl = String(t.label || t.host).replace(/"/g, '&quot;')
+    return '<div class="prow">'
+      + '<input class="lbl" data-label="' + t.host + '" value="' + lbl + '" title="显示名，改完回车保存">'
+      + (cur.password ? '<span class="pill">已配置</span>' : '<span class="pill off">未配置</span>')
       + (t.needsUser ? '<input data-u="' + t.host + '" placeholder="用户名" value="' + (cur.username || '') + '">' : '')
       + '<input type="password" data-p="' + t.host + '" placeholder="密码" value="">'
-      + '<button class="ghost btn-sm" data-save="' + t.host + '">保存</button></div>'
+      + '<button class="ghost btn-sm" data-save="' + t.host + '">保存</button>'
+      + '<button class="danger btn-sm" data-del="' + t.host + '" title="移除这一行">×</button>'
+      + '</div>'
   }).join('')
+  + [
+    '<div class="prow addrow">',
+    '<input id="ndHost" placeholder="主机名 如 app.example.com">',
+    '<input id="ndLabel" placeholder="显示名">',
+    '<input id="ndPath" placeholder="/api/login（可选）">',
+    '<label class="chk"><input type="checkbox" id="ndUser">需用户名</label>',
+    '<button class="ghost btn-sm" id="ndAdd">＋ 添加</button>',
+    '</div>',
+  ].join('')
   const body = [
     '<div class="wrap wide">',
     '<div class="page-head"><h1>后台管理</h1>',
@@ -972,6 +1012,21 @@ function adminPage(creds, totp, panels, emailCfg) {
     'const k=document.querySelector(\'input[data-em="key"]\').value.trim();b.disabled=true;',
     'const r=await post("/admin/email",{addresses:a,mailerKey:k});',
     'if(r.ok){msg("已保存",true);setTimeout(()=>location.reload(),600)}else{msg(r.text);b.disabled=false}});',
+    'document.querySelectorAll("input[data-label]").forEach(inp=>inp.onchange=async()=>{',
+    'const r=await post("/admin/paneldef",{action:"rename",host:inp.dataset.label,label:inp.value.trim()});',
+    'if(!r.ok)msg(r.text)});',
+    'document.querySelectorAll("button[data-del]").forEach(b=>b.onclick=async()=>{',
+    'if(!confirm("移除这一行的自动登录配置？已存的密码也会一起删掉。"))return;b.disabled=true;',
+    'const r=await post("/admin/paneldef",{action:"delete",host:b.dataset.del});',
+    'if(r.ok)location.reload();else{msg(r.text);b.disabled=false}});',
+    'const nd=document.getElementById("ndAdd");',
+    'if(nd)nd.onclick=async()=>{const h=document.getElementById("ndHost").value.trim();',
+    'if(!h)return msg("请填主机名");nd.disabled=true;',
+    'const r=await post("/admin/paneldef",{action:"add",host:h,',
+    'label:document.getElementById("ndLabel").value.trim(),',
+    'loginPath:document.getElementById("ndPath").value.trim(),',
+    'needsUser:document.getElementById("ndUser").checked});',
+    'if(r.ok)location.reload();else{msg(r.text);nd.disabled=false}};',
     'document.querySelectorAll("button[data-save]").forEach(b=>b.onclick=async()=>{',
     'const h=b.dataset.save;const u=document.querySelector(\'input[data-u="\'+h+\'"]\');',
     'const pw=document.querySelector(\'input[data-p="\'+h+\'"]\');b.disabled=true;',
@@ -1390,11 +1445,39 @@ async function handleAuth(req, res, url) {
     return json(res, 200, { ok: true })
   }
 
+  if (path === '/admin/paneldef' && req.method === 'POST') {
+    if (!isAuthed(req)) return send(res, 401, 'unauthorized')
+    const body = JSON.parse(await readBody(req))
+    const act = String(body.action || '')
+    let defs = loadPanelDefs().slice()
+    const host = String(body.host || '').trim().toLowerCase()
+    if (act === 'delete') {
+      defs = defs.filter((d) => d.host !== host)
+      const pn = loadPanels()
+      delete pn[host]
+      savePanels(pn)
+    } else if (act === 'add') {
+      if (!host) return send(res, 400, '主机名不能为空')
+      if (defs.some((d) => d.host === host)) return send(res, 400, '该主机名已存在')
+      const item = { host, label: String(body.label || host), needsUser: !!body.needsUser }
+      if (body.loginPath) item.loginPath = String(body.loginPath)
+      defs = defs.concat([item])
+    } else if (act === 'rename') {
+      if (!defs.some((d) => d.host === host)) return send(res, 404, '未找到该面板')
+      defs = defs.map((d) => (d.host === host ? { ...d, label: String(body.label || d.label) } : d))
+    } else {
+      return send(res, 400, '未知操作')
+    }
+    savePanelDefs(defs)
+    console.log('[gw] paneldefs', act, host, '->', defs.length, 'entries')
+    return json(res, 200, { ok: true })
+  }
+
   if (path === '/admin/panel' && req.method === 'POST') {
     if (!isAuthed(req)) return send(res, 401, 'unauthorized')
     const body = JSON.parse(await readBody(req))
     const host = String(body.host || '')
-    const target = PANEL_TARGETS.find((t) => t.host === host)
+    const target = loadPanelDefs().find((t) => t.host === host)
     if (!target) return send(res, 400, '未知面板')
     const panels = loadPanels()
     const cur = panels[host] || {}
@@ -1493,7 +1576,7 @@ async function panelToken(host, svc) {
   if (c && c.exp > Date.now()) return c.token
   const p = loadPanels()[host]
   if (!p || !p.password) return null
-  const tgt = PANEL_TARGETS.find((t) => t.host === host)
+  const tgt = loadPanelDefs().find((t) => t.host === host)
   try {
     const body = p.username ? { username: p.username, password: p.password } : { password: p.password }
     const r = await panelLoginRequest(host, svc, body, tgt && tgt.loginPath)
