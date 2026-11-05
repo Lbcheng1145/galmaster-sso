@@ -1,3 +1,5 @@
+**English** | [简体中文](zh-CN/deployment.md)
+
 # Deployment guide
 
 End-to-end setup from a bare VPS to a working gateway with two services.

@@ -1,3 +1,5 @@
+**English** | [简体中文](zh-CN/panels.md)
+
 # Panel auto-login
 
 Each panel has its own idea of what a session is. The gateway performs that

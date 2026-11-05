@@ -1,3 +1,5 @@
+**English** | [简体中文](zh-CN/security.md)
+
 # Security
 
 ## Threat model

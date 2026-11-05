@@ -1,3 +1,5 @@
+**English** | [简体中文](zh-CN/screenshots.md)
+
 # Screenshots
 
 Every image below is rendered from a running instance with hostnames,

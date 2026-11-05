@@ -1,3 +1,5 @@
+[English](README.md) | **[简体中文](README.zh-CN.md)**
+
 # Galmaster SSO
 
 A self-hosted single sign-on gateway for a personal fleet of web panels,
