@@ -1,0 +1,21 @@
+{
+  "name": "galmaster-sso",
+  "version": "1.0.0",
+  "description": "Self-hosted SSO gateway for a personal fleet of web panels, with per-panel auto-login",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "src/gateway.mjs",
+  "scripts": {
+    "start": "node src/gateway.mjs",
+    "guard": "node src/guard.mjs",
+    "check": "node --check src/gateway.mjs && node --check src/guard.mjs"
+  },
+  "dependencies": {
+    "@simplewebauthn/server": "^14.0.3",
+    "otpauth": "^9.3.6",
+    "qrcode": "^1.5.4"
+  }
+}

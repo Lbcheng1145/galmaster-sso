@@ -1,0 +1,18 @@
+node_modules/
+data/
+*.log
+
+# real configuration — never commit
+src/config.mjs
+src/config.local.mjs
+
+# secrets that may end up here during testing
+*.key
+*.pem
+credentials.json
+totp.json
+panels.json
+panel.json
+bootstrap.key
+session.key
+invite.json

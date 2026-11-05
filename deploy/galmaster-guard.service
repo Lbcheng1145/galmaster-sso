@@ -1,0 +1,16 @@
+[Unit]
+Description=Galmaster SSO edge guard
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/sso-guard
+ExecStart=/usr/bin/node /opt/sso-guard/guard.mjs
+Restart=always
+RestartSec=3
+User=root
+StandardOutput=append:/var/log/sso-guard.log
+StandardError=append:/var/log/sso-guard.log
+
+[Install]
+WantedBy=multi-user.target

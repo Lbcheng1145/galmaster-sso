@@ -1,0 +1,16 @@
+# Cloudflare Tunnel ingress example.
+# Every hostname terminates on the same gateway port; the gateway routes by Host.
+tunnel: YOUR_TUNNEL_ID
+credentials-file: /etc/cloudflared/YOUR_TUNNEL_ID.json
+
+ingress:
+  - hostname: auth.example.com
+    service: http://localhost:3081
+  - hostname: app1.example.com
+    service: http://localhost:3081
+  - hostname: app2.example.com
+    service: http://localhost:3081
+  # remote origin: point at the edge guard instead of the gateway
+  - hostname: monitor.example.com
+    service: http://localhost:27778
+  - service: http_status:404

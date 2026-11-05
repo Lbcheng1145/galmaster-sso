@@ -1,0 +1,17 @@
+[Unit]
+Description=Galmaster SSO gateway
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/sso
+ExecStart=/usr/bin/node /opt/sso/src/gateway.mjs
+Restart=always
+RestartSec=3
+User=ubuntu
+Group=ubuntu
+StandardOutput=append:/var/log/sso.log
+StandardError=append:/var/log/sso.log
+
+[Install]
+WantedBy=multi-user.target
