@@ -1124,7 +1124,7 @@ function proxy(req, res, svc, host, retried, extraCookies) {
   const lib = t.tls ? https : http
   const opts = {
     host: t.host, port: t.port, path: t.prefix + req.url, method: req.method,
-    headers: { ...headers, host }, agent: t.tls ? httpsAgent : httpAgent,
+    headers: { ...headers, host }, agent: svc.dsh ? false : (t.tls ? httpsAgent : httpAgent),
   }
   if (t.tls) opts.rejectUnauthorized = false
   const up = lib.request(opts, (r) => {
@@ -1162,6 +1162,10 @@ function proxy(req, res, svc, host, retried, extraCookies) {
     }
     res.writeHead(r.statusCode, out)
     r.pipe(res)
+  })
+  up.setTimeout(120000, () => {
+    console.log('[gw] upstream timeout', host, req.method, String(req.url).slice(0, 80))
+    up.destroy(new Error('upstream timeout'))
   })
   up.on('error', (e) => {
     console.log('[gw] upstream error', host, e.message)
